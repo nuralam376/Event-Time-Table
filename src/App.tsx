@@ -1,7 +1,7 @@
-import DayTabs from './components/Days'
+import EventTimeTableContainer from './components/EventTimeTable.container'
 
 function App() {
-  return <DayTabs />
+  return <EventTimeTableContainer />
 }
 
 export default App
