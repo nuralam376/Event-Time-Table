@@ -21,7 +21,6 @@ export default function EventTimeTableVenuesPresenter({
       ref={scrollRef}
     >
       <Box sx={{ display: "flex", alignItems: "center" }}>
-        {/* Empty TIME Column */}
         <Box
           sx={{
             width: TIME_WIDTH,
@@ -32,7 +31,6 @@ export default function EventTimeTableVenuesPresenter({
           }}
         />
 
-        {/* Venue Names */}
         <Box sx={{ display: "flex", minWidth: venues.length * VENUE_WIDTH }}>
           {venues.map((v) => (
             <Paper

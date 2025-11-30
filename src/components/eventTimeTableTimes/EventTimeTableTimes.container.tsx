@@ -29,7 +29,6 @@ export default function EventTimeTableTimesContainer() {
     return Array.from({ length: 7 }).map((_, i) => addDays(today, i));
   }, []);
 
-  // ---------- Local Storage ----------
   const [venues] = useState<TVenue[]>(() => {
     const raw = localStorage.getItem(LOCAL_VENUES);
     if (raw) return JSON.parse(raw);
