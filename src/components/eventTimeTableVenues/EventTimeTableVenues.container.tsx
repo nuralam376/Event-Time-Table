@@ -1,24 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-} from "@mui/material";
-import { format, startOfDay } from "date-fns";
+import { startOfDay, format } from "date-fns";
+import EventTimeTableVenuesPresenter from "./EventTimeTableVenues.presenter";
+import type { TEventItem, TVenue } from "./EventTimeTableVenues.schema";
 
 const LOCAL_VENUES = "ett_venues_v3";
 const LOCAL_EVENTS = "ett_events_v3";
-
-const VENUE_WIDTH = 350;
-const TIME_WIDTH = 150;
-
 const uid = () => Math.random().toString(36).slice(2);
 
 export default function EventTimeTableVenuesContainer() {
   const today = startOfDay(new Date());
 
-  // ---------- LocalStorage ----------
-  const [venues, setVenues] = useState(() => {
+  const [venues] = useState<TVenue[]>(() => {
     const raw = localStorage.getItem(LOCAL_VENUES);
     if (raw) return JSON.parse(raw);
 
@@ -27,15 +19,17 @@ export default function EventTimeTableVenuesContainer() {
       { id: uid(), name: "Venue2" },
       { id: uid(), name: "Venue3" },
     ];
+
     localStorage.setItem(LOCAL_VENUES, JSON.stringify(sample));
     return sample;
   });
 
-  const [events, setEvents] = useState(() => {
+  const [events] = useState<TEventItem[]>(() => {
     const raw = localStorage.getItem(LOCAL_EVENTS);
     if (raw) return JSON.parse(raw);
 
     const d = today;
+
     const sample = [
       {
         id: uid(),
@@ -62,6 +56,7 @@ export default function EventTimeTableVenuesContainer() {
         end: new Date(d.setHours(11, 0, 0, 0)).toISOString(),
       },
     ];
+
     localStorage.setItem(LOCAL_EVENTS, JSON.stringify(sample));
     return sample;
   });
@@ -74,12 +69,10 @@ export default function EventTimeTableVenuesContainer() {
     localStorage.setItem(LOCAL_EVENTS, JSON.stringify(events));
   }, [events]);
 
-  // ---------- Scroll References ----------
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const timeRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync vertical scroll (time column & grid)
   useEffect(() => {
     const grid = gridRef.current;
     const time = timeRef.current;
@@ -88,52 +81,19 @@ export default function EventTimeTableVenuesContainer() {
     const fn = () => {
       time.scrollTop = grid.scrollTop;
     };
+
     grid.addEventListener("scroll", fn);
     return () => grid.removeEventListener("scroll", fn);
   }, []);
 
-
   return (
-    <Box
-      sx={{
-        position: "sticky",
-        top: 62,
-        zIndex: 10,
-        background: "#f5f5f5",
-        borderBottom: "1px solid #ddd",
-        overflowX: "auto",
+    <EventTimeTableVenuesPresenter
+      venues={venues}
+      scrollRefs={{
+        scrollRef,
+        gridRef,
+        timeRef,
       }}
-      ref={scrollRef}
-    >
-      <Box sx={{ display: "flex", alignItems: "center" }}>
-        <Box
-          sx={{
-            width: TIME_WIDTH,
-            flexShrink: 0,
-            height: 50,
-            borderRight: "1px solid #ddd",
-            background: "#f5f5f5",
-          }}
-        />
-
-        {/* Venue Names */}
-        <Box sx={{ display: "flex", minWidth: venues.length * VENUE_WIDTH }}>
-          {venues.map((v) => (
-            <Paper
-              key={v.id}
-              sx={{
-                width: VENUE_WIDTH,
-                px: 2,
-                py: 1,
-                borderRight: "1px solid #eee",
-                flexShrink: 0,
-              }}
-            >
-              <Typography variant="subtitle2">{v.name}</Typography>
-            </Paper>
-          ))}
-        </Box>
-      </Box>
-    </Box>
+    />
   );
 }

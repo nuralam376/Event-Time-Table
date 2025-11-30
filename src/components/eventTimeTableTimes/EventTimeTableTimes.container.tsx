@@ -1,22 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-} from "@mui/material";
-import { format, addDays, startOfDay, differenceInMinutes } from "date-fns";
+import { addDays, startOfDay, differenceInMinutes, format } from "date-fns";
+import EventTimeTableTimesPresenter from "./EventTimeTableTimes.presenter";
+import type { TEventItem, TVenue } from "./EventTimeTableTimes.schema";
 
 const LOCAL_VENUES = "ett_venues_v3";
 const LOCAL_EVENTS = "ett_events_v3";
 
 const ROW_HEIGHT = 20;
 const ROW_MIN = 15;
-const VENUE_WIDTH = 350;
-const TIME_WIDTH = 150;
 
 const uid = () => Math.random().toString(36).slice(2);
 
-// Build all times every 15 minutes
 const buildTimes = () => {
   const arr: string[] = [];
   for (let h = 0; h < 24; h++) {
@@ -28,15 +22,15 @@ const buildTimes = () => {
 };
 const TIMES = buildTimes();
 
-export default function EventTimeTableTimesCotainer() {
+export default function EventTimeTableTimesContainer() {
   const today = startOfDay(new Date());
 
   const days = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => addDays(today, i));
   }, []);
 
-  // ---------- LocalStorage ----------
-  const [venues, setVenues] = useState(() => {
+  // ---------- Local Storage ----------
+  const [venues] = useState<TVenue[]>(() => {
     const raw = localStorage.getItem(LOCAL_VENUES);
     if (raw) return JSON.parse(raw);
 
@@ -45,15 +39,17 @@ export default function EventTimeTableTimesCotainer() {
       { id: uid(), name: "Venue2" },
       { id: uid(), name: "Venue3" },
     ];
+
     localStorage.setItem(LOCAL_VENUES, JSON.stringify(sample));
     return sample;
   });
 
-  const [events, setEvents] = useState(() => {
+  const [events] = useState<TEventItem[]>(() => {
     const raw = localStorage.getItem(LOCAL_EVENTS);
     if (raw) return JSON.parse(raw);
 
     const d = today;
+
     const sample = [
       {
         id: uid(),
@@ -80,6 +76,7 @@ export default function EventTimeTableTimesCotainer() {
         end: new Date(d.setHours(11, 0, 0, 0)).toISOString(),
       },
     ];
+
     localStorage.setItem(LOCAL_EVENTS, JSON.stringify(sample));
     return sample;
   });
@@ -93,14 +90,13 @@ export default function EventTimeTableTimesCotainer() {
   }, [events]);
 
   // ---------- UI State ----------
-  const [dayIndex, setDayIndex] = useState(0);
+  const [dayIndex] = useState(0);
 
-  // ---------- Scroll References ----------
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const timeRef = useRef<HTMLDivElement | null>(null);
+  // ---------- Scroll Sync ----------
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const timeRef = useRef<HTMLDivElement>(null);
 
-  // Sync vertical scroll (time column & grid)
   useEffect(() => {
     const grid = gridRef.current;
     const time = timeRef.current;
@@ -109,6 +105,7 @@ export default function EventTimeTableTimesCotainer() {
     const fn = () => {
       time.scrollTop = grid.scrollTop;
     };
+
     grid.addEventListener("scroll", fn);
     return () => grid.removeEventListener("scroll", fn);
   }, []);
@@ -117,7 +114,6 @@ export default function EventTimeTableTimesCotainer() {
     (ev) => ev.date === format(days[dayIndex], "yyyy-MM-dd")
   );
 
-  // ---------- Event Helpers ----------
   const calcTop = (iso: string) => {
     const d = new Date(iso);
     const idx = (d.getHours() * 60 + d.getMinutes()) / ROW_MIN;
@@ -129,94 +125,19 @@ export default function EventTimeTableTimesCotainer() {
     return (mins / ROW_MIN) * ROW_HEIGHT;
   };
 
-
   return (
-    <Box sx={{ display: "flex", mt: 0 }}>
-      {/* Time Column */}
-      <Paper
-        ref={timeRef}
-        sx={{
-          width: TIME_WIDTH,
-          maxHeight: 600,
-          overflowY: "auto",
-          flexShrink: 0,
-        }}
-      >
-        {TIMES.map((t) => (
-          <Box
-            key={t}
-            sx={{
-              height: ROW_HEIGHT,
-              borderBottom: "1px dashed #eee",
-              px: 1,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="caption">{t}</Typography>
-          </Box>
-        ))}
-      </Paper>
-
-      {/* Event Grid */}
-      <Box
-        sx={{
-          overflow: "auto",
-          maxHeight: 600,
-        }}
-        ref={gridRef}
-        onScroll={(e) => {
-          if (scrollRef.current)
-            scrollRef.current.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
-        }}
-      >
-        <Box sx={{ display: "flex", minWidth: venues.length * VENUE_WIDTH }}>
-          {venues.map((v) => (
-            <Box
-              key={v.id}
-              sx={{
-                width: VENUE_WIDTH,
-                borderRight: "1px solid #f1f1f1",
-                position: "relative",
-              }}
-            >
-              {/* Background time rows */}
-              {TIMES.map((t) => (
-                <Box
-                  key={t}
-                  sx={{
-                    height: ROW_HEIGHT,
-                    borderBottom: "1px dashed #f3f3f3",
-                  }}
-                />
-              ))}
-
-              {/* Events */}
-              {eventsForDay
-                .filter((ev) => ev.venueId === v.id)
-                .map((ev) => (
-                  <Paper
-                    key={ev.id}
-                    sx={{
-                      position: "absolute",
-                      top: calcTop(ev.start),
-                      left: 6,
-                      right: 6,
-                      height: calcHeight(ev.start, ev.end),
-                      bgcolor: "#d7ebff",
-                      p: 1,
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Typography variant="caption">{ev.title}</Typography>
-                  </Paper>
-                ))}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    </Box>
-  
+    <EventTimeTableTimesPresenter
+      times={TIMES}
+      venues={venues}
+      events={eventsForDay}
+      dayIndex={dayIndex}
+      calcTop={calcTop}
+      calcHeight={calcHeight}
+      scrollRefs={{
+        timeRef,
+        gridRef,
+        scrollRef,
+      }}
+    />
   );
 }
