@@ -27,7 +27,7 @@ export default function EventTimeTableDaysPresenter({
                   {format(d, "EEEE")}
                 </Typography>
                 <Typography variant="caption">
-                  {format(d, "dd MMMM yyyy")}
+                  Date: {format(d, "yyyy-MM-dd")}
                 </Typography>
               </Box>
             }
