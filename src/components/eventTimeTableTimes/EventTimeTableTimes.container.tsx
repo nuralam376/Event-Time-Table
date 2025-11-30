@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, startOfDay, differenceInMinutes, format } from "date-fns";
+import {
+  addDays,
+  startOfDay,
+  differenceInMinutes,
+  format,
+  setMinutes,
+  setHours,
+} from "date-fns";
 import EventTimeTableTimesPresenter from "./EventTimeTableTimes.presenter";
 import type { TEventItem, TVenue } from "./EventTimeTableTimes.schema";
 
@@ -29,6 +36,9 @@ export default function EventTimeTableTimesContainer() {
     return Array.from({ length: 7 }).map((_, i) => addDays(today, i));
   }, []);
 
+  // -----------------------------------------
+  // Venues
+  // -----------------------------------------
   const [venues] = useState<TVenue[]>(() => {
     const raw = localStorage.getItem(LOCAL_VENUES);
     if (raw) return JSON.parse(raw);
@@ -43,36 +53,46 @@ export default function EventTimeTableTimesContainer() {
     return sample;
   });
 
+  // -----------------------------------------
+  // Events (Tue/Wed/Thu)
+  // -----------------------------------------
   const [events] = useState<TEventItem[]>(() => {
     const raw = localStorage.getItem(LOCAL_EVENTS);
     if (raw) return JSON.parse(raw);
 
-    const d = today;
+    const today = startOfDay(new Date());
 
-    const sample = [
+    // Get specific upcoming days (no mutation)
+    const tuesday = addDays(today, (2 - today.getDay() + 7) % 7);
+    const wednesday = addDays(today, (3 - today.getDay() + 7) % 7);
+    const thursday = addDays(today, (4 - today.getDay() + 7) % 7);
+
+    const clone = (d: Date) => new Date(d.getTime());
+
+    const sample = [ 
       {
         id: uid(),
-        title: "Event1",
+        title: "Event 1",
         venueId: venues[0]?.id,
-        date: format(d, "yyyy-MM-dd"),
-        start: new Date(d.setHours(9, 0, 0, 0)).toISOString(),
-        end: new Date(d.setHours(9, 30, 0, 0)).toISOString(),
+        date: format(tuesday, "yyyy-MM-dd"),
+        start: setMinutes(setHours(clone(tuesday), 9), 0).toISOString(),
+        end: setMinutes(setHours(clone(tuesday), 9), 30).toISOString(),
       },
       {
         id: uid(),
-        title: "Event2",
+        title: "Event 2",
         venueId: venues[0]?.id,
-        date: format(d, "yyyy-MM-dd"),
-        start: new Date(d.setHours(10, 0, 0, 0)).toISOString(),
-        end: new Date(d.setHours(10, 30, 0, 0)).toISOString(),
+        date: format(wednesday, "yyyy-MM-dd"),
+        start: setMinutes(setHours(clone(wednesday), 12), 0).toISOString(),
+        end: setMinutes(setHours(clone(wednesday), 12), 30).toISOString(),
       },
       {
         id: uid(),
-        title: "Event3",
+        title: "Event 3",
         venueId: venues[0]?.id,
-        date: format(d, "yyyy-MM-dd"),
-        start: new Date(d.setHours(9, 45, 0, 0)).toISOString(),
-        end: new Date(d.setHours(11, 0, 0, 0)).toISOString(),
+        date: format(thursday, "yyyy-MM-dd"),
+        start: setMinutes(setHours(clone(thursday), 9), 45).toISOString(),
+        end: setMinutes(setHours(clone(thursday), 11), 0).toISOString(),
       },
     ];
 
@@ -88,31 +108,65 @@ export default function EventTimeTableTimesContainer() {
     localStorage.setItem(LOCAL_EVENTS, JSON.stringify(events));
   }, [events]);
 
-  // ---------- UI State ----------
+  // -----------------------------------------
+  // UI State
+  // -----------------------------------------
   const [dayIndex] = useState(0);
 
-  // ---------- Scroll Sync ----------
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const timeRef = useRef<HTMLDivElement>(null);
+  // -----------------------------------------
+  // Scroll Sync Refs
+  // -----------------------------------------
+  const scrollRef = useRef<HTMLDivElement | null>(null); // Venue header
+  const gridRef = useRef<HTMLDivElement | null>(null); // Event grid
+  const timeRef = useRef<HTMLDivElement | null>(null); // Time column
 
+  // -----------------------------------------
+  // Scroll Sync Logic (Vertical + Horizontal)
+  // -----------------------------------------
   useEffect(() => {
     const grid = gridRef.current;
     const time = timeRef.current;
-    if (!grid || !time) return;
+    const venueHeader = scrollRef.current;
 
-    const fn = () => {
+    if (!grid || !time || !venueHeader) return;
+
+    // Vertical scroll sync
+    const onGridScroll = () => {
       time.scrollTop = grid.scrollTop;
+      venueHeader.scrollTop = grid.scrollTop;
     };
 
-    grid.addEventListener("scroll", fn);
-    return () => grid.removeEventListener("scroll", fn);
+    const onTimeScroll = () => {
+      grid.scrollTop = time.scrollTop;
+      venueHeader.scrollTop = time.scrollTop;
+    };
+
+    // Horizontal scroll sync
+    const onGridHorizontalScroll = () => {
+      venueHeader.scrollLeft = grid.scrollLeft;
+    };
+
+    grid.addEventListener("scroll", onGridScroll);
+    grid.addEventListener("scroll", onGridHorizontalScroll);
+    time.addEventListener("scroll", onTimeScroll);
+
+    return () => {
+      grid.removeEventListener("scroll", onGridScroll);
+      grid.removeEventListener("scroll", onGridHorizontalScroll);
+      time.removeEventListener("scroll", onTimeScroll);
+    };
   }, []);
 
+  // -----------------------------------------
+  // Filter events for selected day
+  // -----------------------------------------
   const eventsForDay = events.filter(
     (ev) => ev.date === format(days[dayIndex], "yyyy-MM-dd")
   );
 
+  // -----------------------------------------
+  // Layout calculations
+  // -----------------------------------------
   const calcTop = (iso: string) => {
     const d = new Date(iso);
     const idx = (d.getHours() * 60 + d.getMinutes()) / ROW_MIN;

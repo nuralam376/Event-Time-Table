@@ -17,11 +17,12 @@ export default function EventTimeTableTimesPresenter({
     <Box sx={{ display: "flex", mt: 0 }}>
       <Paper
         ref={timeRef}
-        sx={{
-          width: TIME_WIDTH,
-          maxHeight: 600,
-          overflowY: "auto",
-          flexShrink: 0,
+       sx={{
+            width: TIME_WIDTH,
+            maxHeight: 600,
+            overflowY: "auto",
+            overflowX: "hidden",
+            flexShrink: 0,
         }}
       >
         {times.map((t) => (

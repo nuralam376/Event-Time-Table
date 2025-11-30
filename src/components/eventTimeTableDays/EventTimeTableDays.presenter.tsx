@@ -12,7 +12,7 @@ export default function EventTimeTableDaysPresenter({
     <Paper sx={{ mb: 1, overflowX: "auto" }}>
       <Tabs
         value={dayIndex}
-        onChange={(e, v) => onChange(v)}
+        onChange={(_, v) => onChange(v)}
         variant="scrollable"
         scrollButtons="auto"
         sx={{ minWidth }}
